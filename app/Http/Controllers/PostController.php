@@ -6,12 +6,14 @@ use App\Models\Post;
 use App\Http\Requests\StorePostRequest;
 use App\Http\Requests\UpdatePostRequest;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class PostController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
+
     public function index()
     {
         return Post::all();
@@ -27,7 +29,7 @@ class PostController extends Controller
             'body' => 'required'
         ]);
 
-        $post = Post::create($validated);
+        $post = $request->user()->posts()->create($validated);
 
         return response()->json($post, 201);
     }
@@ -51,15 +53,9 @@ class PostController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, Post $post)
     {
-        $post = Post::find($id);
-
-        if (!$post) {
-            return response()->json([
-                'message' => 'A bejegyzés nem található.'
-            ], 404);
-        }
+        Gate::authorize('modify', $post);
 
         $validated = $request->validate([
             'title' => 'sometimes|required|max:255',
@@ -74,9 +70,11 @@ class PostController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy($id)
+    public function destroy(Post $post)
     {
-        $post = Post::find($id);
+        Gate::authorize('modify', $post);
+
+        $post = Post::find($post->id);
 
         if (!$post) {
             return response()->json([
